@@ -1,0 +1,38 @@
+﻿  main.cpp
+c:\users\bks21\desktop\x-wing\src\main.cpp(34): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+c:\users\bks21\desktop\x-wing\src\main.cpp(35): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+c:\users\bks21\desktop\x-wing\src\main.cpp(44): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+c:\users\bks21\desktop\x-wing\src\main.cpp(46): warning C4305: 'initializing': truncation from 'double' to 'float'
+c:\users\bks21\desktop\x-wing\src\main.cpp(47): warning C4305: 'initializing': truncation from 'double' to 'float'
+c:\users\bks21\desktop\x-wing\src\main.cpp(48): warning C4305: 'initializing': truncation from 'double' to 'float'
+c:\users\bks21\desktop\x-wing\src\main.cpp(96): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+c:\users\bks21\desktop\x-wing\src\main.cpp(100): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+c:\users\bks21\desktop\x-wing\src\main.cpp(104): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+c:\users\bks21\desktop\x-wing\src\main.cpp(106): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+c:\users\bks21\desktop\x-wing\src\main.cpp(412): warning C4018: '<': signed/unsigned mismatch
+c:\users\bks21\desktop\x-wing\src\main.cpp(429): warning C4018: '<': signed/unsigned mismatch
+c:\users\bks21\desktop\x-wing\src\main.cpp(671): warning C4305: '-=': truncation from 'double' to 'float'
+c:\users\bks21\desktop\x-wing\src\main.cpp(679): warning C4305: '+=': truncation from 'double' to 'float'
+c:\users\bks21\desktop\x-wing\src\main.cpp(694): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+c:\users\bks21\desktop\x-wing\src\main.cpp(705): warning C4305: '+=': truncation from 'double' to 'float'
+c:\users\bks21\desktop\x-wing\src\main.cpp(714): warning C4305: '-=': truncation from 'double' to 'float'
+c:\users\bks21\desktop\x-wing\src\main.cpp(729): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+c:\users\bks21\desktop\x-wing\src\main.cpp(772): warning C4305: 'initializing': truncation from 'double' to 'float'
+c:\users\bks21\desktop\x-wing\src\main.cpp(773): warning C4305: '=': truncation from 'double' to 'float'
+c:\users\bks21\desktop\x-wing\src\main.cpp(801): warning C4305: 'initializing': truncation from 'double' to 'float'
+c:\users\bks21\desktop\x-wing\src\main.cpp(803): warning C4305: 'initializing': truncation from 'double' to 'float'
+c:\users\bks21\desktop\x-wing\src\main.cpp(815): warning C4305: 'initializing': truncation from 'double' to 'float'
+c:\users\bks21\desktop\x-wing\src\main.cpp(840): warning C4305: 'initializing': truncation from 'double' to 'float'
+c:\users\bks21\desktop\x-wing\src\main.cpp(870): warning C4305: '=': truncation from 'double' to 'float'
+c:\users\bks21\desktop\x-wing\src\main.cpp(871): warning C4305: 'initializing': truncation from 'double' to 'float'
+c:\users\bks21\desktop\x-wing\src\main.cpp(872): warning C4305: 'initializing': truncation from 'double' to 'float'
+c:\users\bks21\desktop\x-wing\src\main.cpp(873): warning C4305: 'initializing': truncation from 'double' to 'float'
+c:\users\bks21\desktop\x-wing\src\main.cpp(874): warning C4305: 'initializing': truncation from 'double' to 'float'
+c:\users\bks21\desktop\x-wing\src\main.cpp(919): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+c:\users\bks21\desktop\x-wing\src\main.cpp(983): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+c:\users\bks21\desktop\x-wing\src\main.cpp(1063): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+c:\users\bks21\desktop\x-wing\src\main.cpp(1069): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+c:\users\bks21\desktop\x-wing\src\main.cpp(1102): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+c:\users\bks21\desktop\x-wing\src\main.cpp(775): warning C4101: 'RY': unreferenced local variable
+c:\users\bks21\desktop\x-wing\src\main.cpp(775): warning C4101: 'RX': unreferenced local variable
+  lab texture.vcxproj -> C:\Users\bks21\Desktop\X-wing\Debug\lab texture.exe
