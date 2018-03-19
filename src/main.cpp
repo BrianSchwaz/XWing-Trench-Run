@@ -16,6 +16,8 @@ CPE/CSC 471 Lab base code Wood/Dunn/Eckhardt
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 # define PI 3.14159265358979323846
+#include <Windows.h>
+#include <MMSystem.h>
 
 using namespace std;
 using namespace glm;
@@ -36,8 +38,8 @@ float MaxRight = equilibrium - PI * 30 / 180;
 float originX = 0.0f;
 float originY = -0.5f;
 float originZ = -4.0f;
-vec2 BoundX = vec2(originX + 1.0f,originX -1.0f);
-vec2 BoundY = vec2(originY + 1.8f,originY -.9f);
+vec2 BoundX = vec2(originX + 0.9f,originX -0.9f);
+vec2 BoundY = vec2(originY + 1.75f,originY -.8f);
 static vec3 XWingPos = vec3(originX, originY,originZ);
 static float noseAngle = 0.0f;
 static float noseEquilibrium = 0.0f;
@@ -69,6 +71,17 @@ static bool reachedEnd = false;
 float its_away = 30;
 static int dstiles = 10;
 static float startRender;
+static bool loseControl = false;
+static vec3 XWingAnimPos;
+static float animPos = -10000;
+static vec3 mycampos;
+static bool blow_this_thing_and_go_home = false;
+static bool gameIsOver = false;
+static vec3 torpedopos;
+static bool torpedoLaunched = false;
+static vec3 torpedoAcceleration = vec3(0.001f,0.001f,.009f);
+static vec3 torpedoVelocity = vec3(.005f, .005f, .005f);
+static vec3 torpedoDestination;
 
 double get_last_elapsed_time()
 {
@@ -133,7 +146,7 @@ public:
 	GLuint VertexBufferID, VertexColorIDBox,NorBufferID,TexBufferID, IndexBufferIDBox;
 
 	//texture data
-	GLuint Texture,Texture2;
+	GLuint Texture,Texture2,Texture3,Texture4,Texture5;
 
 	void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 	{
@@ -191,6 +204,10 @@ public:
 		{
 			flightSpeed = flightSpeed / 2.0f;
 			speeding = false;
+			if (gameIsOver == true)
+			{
+				restarting();
+			}
 		}
 
 	}
@@ -217,7 +234,7 @@ public:
 		string resourceDirectory = "../resources" ;
 		// Initialize mesh.
 		shape = make_shared<Shape>();
-		shape->loadMesh(resourceDirectory + "/XWing.obj", &resourceDirectory);
+		shape->loadMesh(resourceDirectory + "/newxwing.obj", &resourceDirectory);
 		shape->resize();
 		shape->init();
 
@@ -277,14 +294,59 @@ public:
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 		glGenerateMipmap(GL_TEXTURE_2D);
 
-		//[TWOTEXTURES]
-		//set the 2 textures to the correct samplers in the fragment shader:
+		str = resourceDirectory + "/mh_xwings_01%3Amh_xwings_00%3AMAT_xwings_diffuse.png";
+		strcpy(filepath, str.c_str());
+		data = stbi_load(filepath, &width, &height, &channels, 4);
+		glGenTextures(1, &Texture3);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, Texture3);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		str = resourceDirectory + "/DSExplodeSprite.png";
+		strcpy(filepath, str.c_str());
+		data = stbi_load(filepath, &width, &height, &channels, 4);
+		glGenTextures(1, &Texture4);
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, Texture4);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		str = resourceDirectory + "/torpedoBlackBack.png";
+		strcpy(filepath, str.c_str());
+		data = stbi_load(filepath, &width, &height, &channels, 4);
+		glGenTextures(1, &Texture5);
+		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_2D, Texture5);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		//[FOURTEXTURES]
+		//set the 4 textures to the correct samplers in the fragment shader:
 		GLuint Tex1Location = glGetUniformLocation(prog->pid, "tex");//tex, tex2... sampler in the fragment shader
 		GLuint Tex2Location = glGetUniformLocation(prog->pid, "tex2");
+		GLuint Tex3Location = glGetUniformLocation(prog->pid, "tex3");
+		GLuint Tex4Location = glGetUniformLocation(prog->pid, "tex4");
+		GLuint Tex5Location = glGetUniformLocation(prog->pid, "tex5");
 																	 // Then bind the uniform samplers to texture units:
 		glUseProgram(prog->pid);
 		glUniform1i(Tex1Location, 0);
 		glUniform1i(Tex2Location, 1);
+		glUniform1i(Tex3Location, 2);
+		glUniform1i(Tex4Location, 3);
+		glUniform1i(Tex5Location, 4);
 
 		//generate the VAO1
 		glGenVertexArrays(1, &VertexArrayID);
@@ -337,23 +399,7 @@ public:
 		glGenBuffers(1, &NorBufferID);
 		//set the current state to focus on our normal buffer
 		glBindBuffer(GL_ARRAY_BUFFER, NorBufferID);
-		/*
-		for (int j = 0; j < shape->eleBuf[0].size()/3;j++)
-		{
-			//if (j == shape->eleBuf[0].size() - 1) { printf("%d\n", j); }
-			//assign into ABC positions
-			glm::vec3 pos1 = posBuf_noInd[3 * j + 0];
-			glm::vec3 pos2 = posBuf_noInd[3 * j + 1];
-			glm::vec3 pos3 = posBuf_noInd[3 * j + 2];
-			glm::vec3 vec1_2 = pos2 - pos1;
-			glm::vec3 vec1_3 = pos3 - pos1;
-			//normalized normal
-			glm::vec3 normal = glm::normalize(glm::cross(vec1_2, vec1_3));
-			for (int rep = 0; rep < 3; rep++)
-			{
-				normals.push_back(normal);
-			}
-		}*/
+
 
 		glBufferData(GL_ARRAY_BUFFER, sizeof(cube_norm), cube_norm, GL_DYNAMIC_DRAW);
 
@@ -375,12 +421,6 @@ public:
 			glm::vec2(0.0, 0.0),
 
 		};
-		/*for (int j = 0; j < shape->eleBuf[0].size();j++)
-		{
-			texture_noInd.push_back(glm::vec2(shape->texBuf[0][2 * shape->eleBuf[0][j] + 0], shape->texBuf[0][2 * shape->eleBuf[0][j] + 1]));
-			//printf("%f,%f,%f\n", posBuf_noInd[j].x, posBuf_noInd[j].y, posBuf_noInd[j].z);
-		}
-		printf("size: %d\n", texture_noInd.size());*/
 
 		glBufferData(GL_ARRAY_BUFFER, sizeof(cube_tex), cube_tex, GL_DYNAMIC_DRAW);
 		//we need to set up the vertex array
@@ -443,53 +483,12 @@ public:
 			}
 		}
 
-		/*vector<int>visited;
-
-		for (int i = 0; i < trench->eleBuf[0].size();i++)
-		{
-			auto p =std::find(visited.begin(), visited.begin() + visited.size(), i);
-			if(p != visited.begin() + visited.size())
-			{
-				visited.erase(p);
-				continue;
-			}
-			vector<vec3*>norms;
-			norms.push_back(&normals[i]);
-			for(int j = i+1; j < shape->eleBuf[0].size();j++)
-			{
-				//printf("%d\n",j);
-				if(posBuf_noInd[i] == posBuf_noInd[j])
-				{
-					visited.push_back(j);
-					norms.push_back(&(normals[j]));
-				}
-			}
-			vec3 normalsum = vec3(0, 0, 0);
-			for (int j = 0;j < norms.size();j++)
-			{
-				normalsum += *norms[j];
-			}
-			normalsum = normalize(normalsum);
-			for (int j = 0; j < norms.size();j++)
-			{
-				*norms[j] = normalsum;
-			}
-		}*/
-
 		glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(vec3), normals.data(), GL_DYNAMIC_DRAW);
 		//we need to set up the vertex array
 		glEnableVertexAttribArray(1);
 		//key function to get up how many elements to pull out at a time (3)
 		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 		//generate vertex buffer to hand off to OGL
-		/*glGenBuffers(1, &TexBufferID);
-		//set the current state to focus on our vertex buffer
-		glBindBuffer(GL_ARRAY_BUFFER, TexBufferID);
-		glBufferData(GL_ARRAY_BUFFER, texture_noInd.size() * sizeof(vec2), texture_noInd.data(), GL_DYNAMIC_DRAW);
-		//we need to set up the vertex array
-		glEnableVertexAttribArray(2);
-		//key function to get up how many elements to pull out at a time (3)
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);*/
 		
 		glBindVertexArray(0);
 
@@ -559,6 +558,7 @@ public:
 		pexplode->addAttribute("vertPos");
 		pexplode->addAttribute("vertNor");
 		pexplode->addAttribute("vertTex");
+		pexplode->addUniform("isTorpedo");
 
 	}
 
@@ -598,6 +598,7 @@ public:
 	}
 	void restarting()
 	{
+
 		gameOver = false;
 		starting = true;
 		XWingPos = vec3(originX, originY, originZ);
@@ -615,17 +616,27 @@ public:
 		reload = 0;
 		reachedEnd = false;
 		dstiles = 10;
+		blow_this_thing_and_go_home = false;
+		gameIsOver = false;
+		leanAngle = equilibrium;
+		noseAngle = noseEquilibrium;
+		noseUp = false;
+		loseControl = false;
+		torpedoLaunched = false;
+		torpedoAcceleration = vec3(0.001f, 0.001f, .01f);
+		torpedoVelocity = vec3(.05f, .05f, .05f);
+		PlaySound("../resources/boy_20.wav", NULL, SND_ASYNC | SND_LOOP);
 	}
 
 	bool checkCollision(int offset,glm::mat4 M)
 	{
-		if (XWingPos.z > invincibleZ)
+		if (XWingPos.z > invincibleZ || loseControl == true)
 		{
 			return false;
 		}
 		if (XWingPos.x > BoundX.x || XWingPos.x < BoundX.y || XWingPos.y < BoundY.y)
 		{
-			printf("walls\n");
+			//printf("walls\n");
 			return true;
 		}
 		std::vector<vec4> adjpos;
@@ -636,7 +647,7 @@ public:
 
 		if (offset == 2)
 		{
-			glm::mat4 ScaleCollision = glm::scale(mat4(1.0f), vec3(1.0, 1.0f,1.0f));
+			glm::mat4 ScaleCollision = glm::scale(mat4(1.0f), vec3(1.5, 1.5f,1.5f));
 			M = M * ScaleCollision;
 		}
 
@@ -664,6 +675,13 @@ public:
 
 	void moveXWing()
 	{
+		if (loseControl == true)
+		{
+			leanLeft = false;
+			noseDown = false;
+			speeding = false;
+			leanRight = false;
+		}
 		if (leanRight == true)
 		{
 			if (leanAngle > MaxRight)
@@ -703,7 +721,7 @@ public:
 		{
 			if (noseAngle < MaxUp)
 				noseAngle += 4 * PI / 180;
-			if (XWingPos.y < BoundY.x)
+			if (XWingPos.y < BoundY.x  || loseControl == true)
 			{
 				XWingPos.y += speedY;
 			}
@@ -749,6 +767,20 @@ public:
 	will actually issue the commands to draw any geometry you have set up to
 	draw
 	********/
+	float findDistance(float xvec, float yvec, float zvec)
+	{
+		return sqrt(pow(xvec, 2) + pow(yvec, 2) + pow(zvec, 2));
+	}
+
+	void calcNewTorpedoPos()
+	{
+		vec3 direction = glm::normalize(torpedoDestination - torpedopos);
+		torpedopos.x = torpedopos.x + torpedoVelocity.x * direction.x;
+		torpedopos.y = torpedopos.y + torpedoVelocity.y * direction.y;
+		torpedopos.z = torpedopos.z + torpedoVelocity.z * direction.z;
+		torpedoVelocity = torpedoVelocity + torpedoAcceleration;
+		
+	}
 
 
 	void render()
@@ -787,15 +819,51 @@ public:
 		//animation with the model matrix:
 		static float w = 0.0;
 
+		if (XWingPos.z < animPos)
+		{
+			loseControl = true;
+			if (XWingPos.z < animPos - 1.5f)
+			{
+				noseUp = true;
+				if (torpedoLaunched == false)
+				{
+					PlaySound("../resources/torpedos.wav", NULL, SND_ASYNC);
+					torpedopos = XWingPos;
+					torpedoDestination = vec3(0.0f, -2.0f, XWingPos.z - 2.5f);
+					torpedopos.y -= 0.1f;
+					torpedoLaunched = true;
+				}
+
+			}
+			//if (XWingPos.z < animPos - 1.75f)
+			//{
+				//leanRight = true;
+			//}
+		}
+
 		//XWing fly
 		if (crashed == false)
 		{
 			XWingPos.z -= flightSpeed;
-
 			moveXWing();
 		}
 
-		mycam.pos = vec3(-XWingPos.x,-XWingPos.y,-XWingPos.z) + vec3(0.0f, -0.25f + .05 * speedingZoomIn, -2.0f + .25 * speedingZoomIn);
+		if (loseControl == false)
+		{
+			mycampos = vec3(-XWingPos.x, -XWingPos.y, -XWingPos.z) + vec3(0.0f, -0.25f + .05 * speedingZoomIn, -2.0f + .25 * speedingZoomIn);
+		}
+		if (loseControl == true)
+		{
+			mycampos.x = originX;
+			mycampos.y = originY;
+
+		}
+
+		if (blow_this_thing_and_go_home == true)
+		{
+			leanAngle = equilibrium;
+			noseAngle = noseEquilibrium;
+		}
 
 		float trans = 0;// sin(t) * 2;
 		float aX = PI / 2;
@@ -804,11 +872,10 @@ public:
 		glm::mat4 RotateX = glm::rotate(glm::mat4(1.0f), noseAngle, glm::vec3(1.0f, 0.0f, 0.0f));
 		glm::mat4 Rx = glm::rotate(glm::mat4(1.0f), aX, glm::vec3(1.0f, 0.0f, 0.0f));
 		glm::mat4 Trans = glm::translate(glm::mat4(1.0f), glm::vec3(XWingPos.x, XWingPos.y, XWingPos.z));
-		glm::mat4 CamTrans = glm::translate(glm::mat4(1.0f), glm::vec3(mycam.pos.x, mycam.pos.y, mycam.pos.z));
-		glm::mat4 skyTrans = glm::translate(glm::mat4(1.0f), glm::vec3(-mycam.pos.x, -mycam.pos.y, -mycam.pos.z));
+		glm::mat4 CamTrans = glm::translate(glm::mat4(1.0f), glm::vec3(mycampos.x, mycampos.y, mycampos.z));
+		glm::mat4 skyTrans = glm::translate(glm::mat4(1.0f), glm::vec3(-mycampos.x, -mycampos.y, -mycampos.z));
 		glm::mat4 S = glm::scale(glm::mat4(1.0f), glm::vec3(0.3f, 0.3f, 0.3f));
 		glm::mat4 RotateZ = glm::rotate(glm::mat4(1.0f), leanAngle, vec3(0.0f, 0.0f, 1.0f));
-		//glm::mat4 thirdPerson = glm::translate(mat4(1.0f), vec3(0.0f, -0.25f + .05 * speedingZoomIn, -2.0f + .25 * speedingZoomIn));
 
 		V = CamTrans;
 
@@ -835,19 +902,68 @@ public:
 
 		psky->unbind();
 
-		M = Trans * RotateZ * RotateX * RotateY * S;
+		M = skyTrans * RotateZ * RotateX * RotateY * S;
 
 		float expAngle = PI;
+
 		glm::mat4 RotateExp = glm::rotate(glm::mat4(1.0f), expAngle, vec3(0.0f, 1.0f, 0.0f));
-		glm::mat4 TransExp = glm::translate(glm::mat4(1.0f), vec3(0.0f, 0.0f, -0.75f));
-		glm::mat4 ScaleExp = glm::scale(glm::mat4(1.0f), vec3(1.5f, 1.5f, 1.0f));
+		glm::mat4 TransExp = glm::translate(glm::mat4(1.0f), vec3(0.0f, 0.0f, 5.75f));
+		glm::mat4 ScaleExp = glm::scale(glm::mat4(1.0f), vec3(4.0f, 4.0f, 4.0f));
 
 		glm::mat4 M2 = M * TransExp * RotateExp * ScaleExp;
 
-		// Draw the box using GLSL.
-		//prog->bind();
+		if (gameIsOver == true)
+		{
+			return;
+		}
+		else if (blow_this_thing_and_go_home == true && gameIsOver == false)
+		{
+			pexplode->bind();
 
-		//prog->unbind();
+			//glBindVertexArray(VertexArrayID);
+
+			float expframeX = 0.0f;
+			float expframeY = 0.0f;
+			if (sumtime > (0.0625/8.0))
+			{
+				sumtime = 0;
+				frame++;
+			}
+			if (frame == 15)
+			{
+				//frame = 0;
+				gameIsOver = true;
+			}
+			//M = Trans;
+			sumtime += get_last_elapsed_time();
+			//printf("frame:%d,%d,%d\n",frame, (frame % 4),(frame / 4));
+			vec2 expframe = vec2((frame % 4), (frame / 4));
+			glUniformMatrix4fv(pexplode->getUniform("P"), 1, GL_FALSE, &P[0][0]);
+			glUniformMatrix4fv(pexplode->getUniform("V"), 1, GL_FALSE, &V[0][0]);
+			glUniformMatrix4fv(pexplode->getUniform("M"), 1, GL_FALSE, &M2[0][0]);
+			glUniform2fv(pexplode->getUniform("exp_frame"), 1, &expframe[0]);
+			glUniform3fv(pexplode->getUniform("campos"), 1, &mycam.pos[0]);
+			glUniform1i(pexplode->getUniform("isTorpedo"), 0);
+
+			glBindVertexArray(VertexArrayID);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IndexBufferIDBox);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, Texture4);
+			//glUniformMatrix4fv(pexplode->getUniform("M"), 1, GL_FALSE, &M[0][0]);
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, (void*)0);
+
+			pexplode->unbind();
+			return;
+		}
+
+		M = Trans * RotateZ * RotateX * RotateY * S;
+
+		expAngle = PI;
+		RotateExp = glm::rotate(glm::mat4(1.0f), expAngle, vec3(0.0f, 1.0f, 0.0f));
+		TransExp = glm::translate(glm::mat4(1.0f), vec3(0.0f, 0.0f, 0.75f));
+		ScaleExp = glm::scale(glm::mat4(1.0f), vec3(0.7f, 0.7f, 0.7f));
+
+		M2 = Trans * TransExp * RotateExp * ScaleExp;
 
 		prog->bind();
 
@@ -858,13 +974,14 @@ public:
 		glUniform3fv(prog->getUniform("campos"), 1, &mycam.pos[0]);
 		glUniform1i(prog->getUniform("obj"), 0);
 
-		//actually draw from vertex 0, 3 vertices
-		/*glBindBuffer(GL_ARRAY_BUFFER, VertexBufferID);
-		glDrawArrays(GL_TRIANGLES, 0, shape->eleBuf[0].size());
-		glBindVertexArray(VertexArrayID);*/
+		
 		if (crashed == false)
 		{
+			glUniform1i(prog->getUniform("obj"), 3);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, Texture3);
 			shape->draw(prog, FALSE);
+			glUniform1i(prog->getUniform("obj"), 2);
 		}
 
 		angleX = -PI / 2;
@@ -890,20 +1007,23 @@ public:
 		std::vector<float> turretposcpy = turretpos;
 		std::vector<float> barrierposcpy = barrierpos;
 
-		if (blastrad < 10.0f)
+		//update blast radius from turret
+		if (blastrad < 12.0f)
 		{
-			blastrad += .15f;
+			blastrad += .25f;
 		}
 		else
 		{
 			blastrad = 1.0f;
 		}
+
 		glUniform1i(prog->getUniform("obj"), 2);
 		bool collided = false;
 		for (int i = 0; i < 3; i++)
 		{
 			for (int j = 0; j < dstiles; j++)
 			{
+				float zPos = -1.0f * j + startRender;
 				Trans = glm::translate(mat4(1.0f), vec3(-2.0f + i, -1.3f, -1.0f * j + startRender));
 
 				M = Trans * RotateX * S;
@@ -912,7 +1032,7 @@ public:
 				glBindBuffer(GL_ARRAY_BUFFER, VertexBufferID);
 				glDrawArrays(GL_TRIANGLES, 0, trench->eleBuf[0].size());
 
-				if (i == 0 && j % 3 == turretOffset)
+				if (i == 0 && j % 3 == turretOffset && !(reachedEnd == true && j > dstiles - 8))
 				{
 					if (starting == true)
 					{
@@ -932,7 +1052,7 @@ public:
 					M = M * BlastTrans * BlastRotate * BlastRadius * BlastScale;
 					if (checkCollision(2, M)) // offset of 2 for boxes when checking blast collision
 					{
-						printf("blaster\n");
+						//printf("blaster\n");
 						collided = true;
 					}
 					glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE, &M[0][0]);
@@ -942,7 +1062,7 @@ public:
 					M = M * BT2;
 					if (checkCollision(2, M)) // offset of 2 for boxes when checking blast collision
 					{
-						printf("blaster\n");
+						//printf("blaster\n");
 						collided = true;
 					}
 					glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE, &M[0][0]);
@@ -952,24 +1072,15 @@ public:
 					M = Trans * TurretTrans* TurretRotate*TurretScale;
 					if (checkCollision(0, M)) // offset of 0 for boxes when checking turret collision
 					{
-						printf("Turret\n");
+						//printf("Turret\n");
 						collided = true;
 					}
 
 					glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE, &M[0][0]);
 					turret->draw(prog, FALSE);
 
-					/*M = Trans * BarrierTrans * BarrierScale * BarrierRotate;
-					if (checkCollision(1, M)) // offset of 1 for boxes when checking barrier collision
-					{
-						collided = true;
-					}
-
-					glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE, &M[0][0]);
-					barrier->draw(prog, FALSE);*/
-					//trench->draw(prog, FALSE);
 				}
-				if (i == 0 && j % 2 == barrierOffset && !(reachedEnd == true && j > dstiles - 6))
+				if (i == 0 && j % 2 == barrierOffset && !(reachedEnd == true && j > dstiles - 8))
 				{
 					if (starting == true)
 					{
@@ -980,7 +1091,7 @@ public:
 						}
 						else
 						{
-							r = 1.0 + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (3.0 - 1.0)));
+							r = 1.0 + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (3.5 - 1.0)));
 						}
 						barrierpos.push_back(r);
 						BarrierTrans = glm::translate(mat4(1.0f), vec3(2.0f, r - 1.0f, 0.0f));
@@ -994,7 +1105,7 @@ public:
 					M = Trans * BarrierTrans * BarrierScale * BarrierRotate;
 					if (checkCollision(1, M)) // offset of 1 for boxes when checking barrier collision
 					{
-						printf("barrier\n");
+						//printf("barrier\n");
 						collided = true;
 					}
 
@@ -1031,9 +1142,15 @@ public:
 					M = Trans * BarrierTrans * BarrierScale * BarrierRotate;
 					glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE, &M[0][0]);
 					barrier->draw(prog, FALSE);
+					if (animPos == -10000)
+					{
+						animPos = zPos + 5.0f;
+					}
 				}
 			}
 		}
+
+		//check how many consecutive registered collisions
 		if (collided == true)
 		{
 			exploded++;
@@ -1075,10 +1192,11 @@ public:
 				barrierOffset = reload % 2;
 			}
 		}
-		printf("exploded: %d\n", exploded);
-		if (exploded >= 3)
+		//printf("exploded: %d\n", exploded);
+		if (exploded == 3)
 		{
 			crashed = true;
+			PlaySound("../resources/gotaproblem.wav", NULL, SND_ASYNC);
 		}
 
 		if (crashed == true && gameOver == false)
@@ -1107,6 +1225,7 @@ public:
 			glUniformMatrix4fv(pexplode->getUniform("M"), 1, GL_FALSE, &M2[0][0]);
 			glUniform2fv(pexplode->getUniform("exp_frame"), 1, &expframe[0]);
 			glUniform3fv(pexplode->getUniform("campos"), 1, &mycam.pos[0]);
+			glUniform1i(pexplode->getUniform("isTorpedo"), 0);
 
 			glBindVertexArray(VertexArrayID);
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IndexBufferIDBox);
@@ -1119,37 +1238,57 @@ public:
 
 		}
 
-		/*M = RotateX * S;
+		if (torpedoLaunched == true)
+		{
+			pexplode->bind();
 
-		glUniformMatrix4fv(prog->getUniform("P"), 1, GL_FALSE, &P[0][0]);
-		glUniformMatrix4fv(prog->getUniform("V"), 1, GL_FALSE, &V[0][0]);
-		glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE, &M[0][0]);
-		//actually draw from vertex 0, 3 vertices
-		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferID);
-		glDrawArrays(GL_TRIANGLES, 0, posBuf_noInd.size());
-		
-		M = glm::translate(glm::mat4(1.0f), glm::vec3(-1.0f, -0.15f, -1.0f));
-		S = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, 1.0f));
-		M = M * RotateX * S;
-		glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE, &M[0][0]);
-		glBindVertexArray(VertexArrayID2);
-		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferID);
-		glDrawArrays(GL_TRIANGLES, 0, trench->eleBuf[0].size());*/
-		
-		/*
-		M = glm::translate(glm::mat4(1.0f), glm::vec3(0.5f, -0.1f, -3.0f));
-		S = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 10.0f, 1.0f));
-		M = M * RotateX * S;
-		glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE, &M[0][0]);
-		glDrawArrays(GL_TRIANGLES, 0, trench->eleBuf[0].size());*/
+			//glBindVertexArray(VertexArrayID);
 
-		/*Trans = glm::translate(glm::mat4(1.0f), glm::vec3(1.0f, 0.0f, -3 + trans));
-		RotateY = glm::rotate(glm::mat4(1.0f), -angleY, glm::vec3(0.0f, 1.0f, 0.0f));
-		M = Trans * RotateY * RotateX * S;
+			float expframeX = 0.0f;
+			float expframeY = 0.0f;
+			if (sumtime > (0.0625))
+			{
+				sumtime = 0;
+				frame++;
+			}
+			if (frame == 15)
+			{
+				frame = 15;
+			}
 
-		glBindVertexArray(VertexArrayID2);
-		glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE, &M[0][0]);
-		glDrawArrays(GL_TRIANGLES, 0, posBuf_noInd.size());*/
+			calcNewTorpedoPos();
+			ScaleExp = glm::scale(mat4(1.0f), vec3(0.2, 0.2, 0.2));
+			M = glm::translate(mat4(1.0f), torpedopos) * RotateExp * ScaleExp;
+			vec3 distancevec = torpedoDestination - torpedopos;
+			if (findDistance(distancevec.x,distancevec.y,distancevec.z) < 0.1f)
+			{
+				PlaySound("../resources/deathstarExplode.wav", NULL, SND_ASYNC);
+				blow_this_thing_and_go_home = true;
+				frame = 0;
+				sumtime = 0;
+			}
+
+			
+
+			sumtime += get_last_elapsed_time();
+			//printf("frame:%d,%d,%d\n",frame, (frame % 4),(frame / 4));
+			vec2 expframe = vec2((frame % 4), (frame / 4));
+			glUniformMatrix4fv(pexplode->getUniform("P"), 1, GL_FALSE, &P[0][0]);
+			glUniformMatrix4fv(pexplode->getUniform("V"), 1, GL_FALSE, &V[0][0]);
+			glUniformMatrix4fv(pexplode->getUniform("M"), 1, GL_FALSE, &M[0][0]);
+			glUniform2fv(pexplode->getUniform("exp_frame"), 1, &expframe[0]);
+			glUniform3fv(pexplode->getUniform("campos"), 1, &mycam.pos[0]);
+			glUniform1i(pexplode->getUniform("isTorpedo"), 1);
+
+			glBindVertexArray(VertexArrayID);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IndexBufferIDBox);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, Texture5);
+			//glUniformMatrix4fv(pexplode->getUniform("M"), 1, GL_FALSE, &M[0][0]);
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, (void*)0);
+
+			pexplode->unbind();
+		}
 
 
 	}
@@ -1158,8 +1297,8 @@ public:
 //******************************************************************************************
 int main(int argc, char **argv)
 {
-
-
+	
+	
 	std::string resourceDir = "../resources"; // Where the resources are loaded from
 	if (argc >= 2)
 	{
@@ -1180,7 +1319,7 @@ int main(int argc, char **argv)
 	// Initialize scene.
 	application->init(resourceDir);
 	application->initGeom();
-
+	PlaySound("../resources/boy_20.wav", NULL, SND_ASYNC | SND_LOOP);
 	// Loop until the user closes the window.
 	while(! glfwWindowShouldClose(windowManager->getHandle()))
 	{
